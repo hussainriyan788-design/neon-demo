@@ -1,1 +1,67 @@
-<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Neon Demo</title></head><body style="background:#000;color:#0f8;text-align:center;font-family:Arial;padding-top:50px"><h1>NEON WHEEL DEMO</h1><h2 id=m>1.00x</h2><h3>Balance: <span id=b>1000</span></h3><button style=width:120px;height:120px;border-radius:50%;background:#0f8;border:0;font-size:20px ontouchstart=s() ontouchend=e()>HOLD</button><p style=color:#666>DEMO ONLY</p><script>let b=1000,x=1,t,i;u=()=>{m.innerText=x.toFixed(2)+'x';b.innerText=b.toFixed(0)};s=()=>{if(t)return;b-=100;t=1;i=setInterval(()=>{x+=.05;u()},50)};e=()=>{if(!t)return;clearInterval(i);b+=100*x;t=0;x=1;u()};u()</script></body></html>
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Chicken Cross Game</title>
+<style>
+  body { margin:0; background:#4CAF50; overflow:hidden; font-family:sans-serif; touch-action:none }
+  #game { position:relative; width:100%; height:100vh; background:#6B8E23 }
+  #chicken { position:absolute; width:40px; height:40px; background:yellow; border-radius:50%; bottom:20px; left:50%; transform:translateX(-50%); z-index:10; box-shadow:0 0 10px yellow }
+  .car { position:absolute; width:60px; height:30px; background:red; border-radius:5px; box-shadow:0 0 5px red }
+  #score { position:absolute; top:10px; left:10px; color:white; font-size:24px; font-weight:bold; z-index:20; text-shadow:2px 2px 4px #000 }
+  #controls { position:absolute; bottom:80px; width:100%; text-align:center; z-index:20 }
+  .btn { background:#fff; border:none; padding:20px 25px; margin:5px; font-size:24px; border-radius:50%; box-shadow:0 4px 8px rgba(0,0,0,0.3) }
+  .btn:active { transform:scale(0.9) }
+</style>
+</head>
+<body>
+<div id="game">
+  <div id="score">Score: 0</div>
+  <div id="chicken"></div>
+  <div id="controls">
+    <button class="btn" onclick="move('up')">↑</button><br>
+    <button class="btn" onclick="move('left')">←</button>
+    <button class="btn" onclick="move('right')">→</button>
+  </div>
+</div>
+<script>
+let chicken = document.getElementById('chicken');
+let game = document.getElementById('game');
+let score = 0;
+let posX = game.offsetWidth/2 - 20;
+let posY = game.offsetHeight - 60;
+let gameOver = false;
+function move(dir) {
+  if(gameOver) return;
+  if(dir=='up') { posY -= 50; score++; }
+  if(dir=='left' && posX > 0) posX -= 40;
+  if(dir=='right' && posX < game.offsetWidth-40) posX += 40;
+  chicken.style.left = posX + 'px';
+  chicken.style.bottom = (game.offsetHeight - posY - 40) + 'px';
+  document.getElementById('score').innerText = 'Score: ' + score;
+}
+function createCar() {
+  if(gameOver) return;
+  let car = document.createElement('div');
+  car.className = 'car';
+  car.style.top = Math.random() * (game.offsetHeight - 250) + 80 + 'px';
+  car.style.left = '-60px';
+  game.appendChild(car);
+  let speed = Math.random() * 4 + 3;
+  let moveCar = setInterval(() => {
+    if(gameOver) { clearInterval(moveCar); return; }
+    let left = parseFloat(car.style.left);
+    car.style.left = left + speed + 'px';
+    if(left > game.offsetWidth) { car.remove(); clearInterval(moveCar); }
+    let cRect = chicken.getBoundingClientRect();
+    let carRect = car.getBoundingClientRect();
+    if(!(cRect.right < carRect.left || cRect.left > carRect.right || cRect.bottom < carRect.top || cRect.top > carRect.bottom)) {
+      gameOver = true;
+      setTimeout(()=>{ alert('Game Over! Score: ' + score); location.reload(); }, 100);
+    }
+  }, 20);
+}
+setInterval(createCar, 1200);
+</script>
+</body>
+</html>
