@@ -1,69 +1,202 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Chicken Cross Game</title>
+<title>Chicken Cross by Riyan</title>
 <style>
-  body { margin:0; background:#4CAF50; overflow:hidden; font-family:sans-serif; touch-action:none }
-  #game { position:relative; width:100%; height:100vh; background:#6B8E23 }
-  #chicken { position:absolute; width:40px; height:40px; background:yellow; border-radius:50%; bottom:60px; left:50%; transform:translateX(-50%); z-index:10; box-shadow:0 0 10px yellow; border:2px solid orange }
-  .car { position:absolute; width:60px; height:30px; background:red; border-radius:5px; box-shadow:0 0 5px red }
-  #score { position:absolute; top:10px; left:10px; color:white; font-size:24px; font-weight:bold; z-index:20; text-shadow:2px 2px 4px #000 }
-  #controls { position:absolute; bottom:80px; width:100%; text-align:center; z-index:20 }
-  .btn { background:#fff; border:none; padding:20px 25px; margin:5px; font-size:24px; border-radius:50%; box-shadow:0 4px 8px rgba(0,0,0,0.3) }
-  .btn:active { transform:scale(0.9) }
+  body { margin: 0; background: #222; overflow: hidden; font-family: Arial; }
+  canvas { display: block; background: #4CAF50; }
+  #score { 
+    position: absolute; top: 10px; left: 10px; 
+    color: white; font-size: 32px; font-weight: bold;
+    text-shadow: 2px 2px 4px #000;
+  }
+  .controls {
+    position: absolute; bottom: 20px; width: 100%;
+    display: flex; justify-content: center; align-items: center;
+  }
+  .btn-row { display: flex; flex-direction: column; align-items: center; }
+  .btn { 
+    width: 70px; height: 70px; margin: 5px;
+    font-size: 30px; border-radius: 50%; border: 3px solid white;
+    background: rgba(255,255,255,0.8); color: #333; font-weight: bold;
+  }
+  .btn:active { background: rgba(255,255,255,1); transform: scale(0.9); }
+  #gameOver {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.9); color: white; padding: 30px;
+    text-align: center; border-radius: 15px; display: none;
+  }
 </style>
 </head>
 <body>
-<div id="game">
-  <div id="score">Score: 0</div>
-  <div id="chicken"></div>
-  <div id="controls">
-    <button class="btn" onclick="move('up')">↑</button><br>
-    <button class="btn" onclick="move('left')">←</button>
-    <button class="btn" onclick="move('right')">→</button>
+<div id="score">Score: 0</div>
+<canvas id="game"></canvas>
+
+<div class="controls">
+  <div class="btn-row">
+    <button class="btn" id="upBtn">↑</button>
+    <div>
+      <button class="btn" id="leftBtn">←</button>
+      <button class="btn" id="downBtn">↓</button>
+      <button class="btn" id="rightBtn">→</button>
+    </div>
   </div>
 </div>
+
+<div id="gameOver">
+  <h2>Game Over!</h2>
+  <p>Score: <span id="finalScore">0</span></p>
+  <button class="btn" onclick="location.reload()" style="width:120px; border-radius:10px;">Restart</button>
+</div>
+
 <script>
-let chicken = document.getElementById('chicken');
-let game = document.getElementById('game');
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
 let score = 0;
-let posX = window.innerWidth/2 - 20;
-let posY = 60;
-let gameOver = false;
-chicken.style.left = posX + 'px';
-chicken.style.bottom = posY + 'px';
-function move(dir) {
-  if(gameOver) return;
-  if(dir=='up') { posY += 50; score++; }
-  if(dir=='left' && posX > 0) posX -= 40;
-  if(dir=='right' && posX < window.innerWidth-40) posX += 40;
-  chicken.style.left = posX + 'px';
-  chicken.style.bottom = posY + 'px';
-  document.getElementById('score').innerText = 'Score: ' + score;
+let gameRunning = true;
+
+// Chicken
+const chicken = { 
+  x: canvas.width/2, y: canvas.height - 100, 
+  size: 35, speed: 8 
+};
+
+// Cars
+const cars = [];
+const carLanes = [150, 250, 350, 450, 550];
+for(let i = 0; i < 8; i++){
+  cars.push({
+    x: Math.random() * canvas.width,
+    y: carLanes[Math.floor(Math.random()*carLanes.length)],
+    width: 60, height: 35,
+    speed: 3 + Math.random() * 3,
+    color: `hsl(${Math.random()*360}, 70%, 50%)`
+  });
 }
-function createCar() {
-  if(gameOver) return;
-  let car = document.createElement('div');
-  car.className = 'car';
-  car.style.top = Math.random() * (window.innerHeight - 250) + 80 + 'px';
-  car.style.left = '-60px';
-  game.appendChild(car);
-  let speed = Math.random() * 4 + 3;
-  let moveCar = setInterval(() => {
-    if(gameOver) { clearInterval(moveCar); return; }
-    let left = parseFloat(car.style.left);
-    car.style.left = left + speed + 'px';
-    if(left > window.innerWidth) { car.remove(); clearInterval(moveCar); }
-    let cRect = chicken.getBoundingClientRect();
-    let carRect = car.getBoundingClientRect();
-    if(!(cRect.right < carRect.left || cRect.left > carRect.right || cRect.bottom < carRect.top || cRect.top > carRect.bottom)) {
-      gameOver = true;
-      setTimeout(()=>{ alert('Game Over! Score: ' + score); location.reload(); }, 100);
+
+// Draw Chicken
+function drawChicken(){
+  ctx.fillStyle = '#FFD700';
+  ctx.beginPath();
+  ctx.arc(chicken.x, chicken.y, chicken.size, 0, Math.PI*2);
+  ctx.fill();
+  
+  // Eyes
+  ctx.fillStyle = '#000';
+  ctx.beginPath();
+  ctx.arc(chicken.x-8, chicken.y-5, 4, 0, Math.PI*2);
+  ctx.arc(chicken.x+8, chicken.y-5, 4, 0, Math.PI*2);
+  ctx.fill();
+  
+  // Beak
+  ctx.fillStyle = '#FF8C00';
+  ctx.beginPath();
+  ctx.moveTo(chicken.x, chicken.y+2);
+  ctx.lineTo(chicken.x-6, chicken.y+10);
+  ctx.lineTo(chicken.x+6, chicken.y+10);
+  ctx.fill();
+}
+
+// Draw Car
+function drawCar(car){
+  ctx.fillStyle = car.color;
+  ctx.fillRect(car.x, car.y, car.width, car.height);
+  
+  // Windows
+  ctx.fillStyle = '#87CEEB';
+  ctx.fillRect(car.x+10, car.y+5, car.width-20, 15);
+  
+  // Wheels
+  ctx.fillStyle = '#222';
+  ctx.beginPath();
+  ctx.arc(car.x+12, car.y+car.height, 8, 0, Math.PI*2);
+  ctx.arc(car.x+car.width-12, car.y+car.height, 8, 0, Math.PI*2);
+  ctx.fill();
+}
+
+// Draw Road
+function drawRoad(){
+  ctx.fillStyle = '#555';
+  for(let lane of carLanes){
+    ctx.fillRect(0, lane-20, canvas.width, 70);
+    // Road lines
+    ctx.strokeStyle = '#FFF';
+    ctx.lineWidth = 4;
+    ctx.setLineDash([20, 20]);
+    ctx.beginPath();
+    ctx.moveTo(0, lane+15);
+    ctx.lineTo(canvas.width, lane+15);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+}
+
+// Update
+function update(){
+  if(!gameRunning) return;
+  
+  // Move cars
+  cars.forEach(car => {
+    car.x += car.speed;
+    if(car.x > canvas.width) {
+      car.x = -car.width;
+      car.y = carLanes[Math.floor(Math.random()*carLanes.length)];
+      score++;
+      document.getElementById('score').innerText = 'Score: ' + score;
     }
-  }, 20);
+    
+    // Collision
+    if(chicken.x + chicken.size > car.x && 
+       chicken.x - chicken.size < car.x + car.width &&
+       chicken.y + chicken.size > car.y && 
+       chicken.y - chicken.size < car.y + car.height){
+      gameOver();
+    }
+  });
+  
+  // Win condition
+  if(chicken.y < 50){
+    score += 10;
+    chicken.y = canvas.height - 100;
+    document.getElementById('score').innerText = 'Score: ' + score;
+  }
 }
-setInterval(createCar, 1200);
+
+function gameOver(){
+  gameRunning = false;
+  document.getElementById('finalScore').innerText = score;
+  document.getElementById('gameOver').style.display = 'block';
+}
+
+// Draw
+function draw(){
+  ctx.fillStyle = '#4CAF50';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  drawRoad();
+  cars.forEach(drawCar);
+  drawChicken();
+}
+
+// Game Loop
+function gameLoop(){
+  update();
+  draw();
+  requestAnimationFrame(gameLoop);
+}
+
+// Controls
+document.getElementById('upBtn').onclick = () => { if(gameRunning && chicken.y > 0) chicken.y -= chicken.speed*3; };
+document.getElementById('downBtn').onclick = () => { if(gameRunning && chicken.y < canvas.height) chicken.y += chicken.speed*3; };
+document.getElementById('leftBtn').onclick = () => { if(gameRunning && chicken.x > 0) chicken.x -= chicken.speed*3; };
+document.getElementById('rightBtn').onclick = () => { if(gameRunning && chicken.x < canvas.width) chicken.x += chicken.speed*3; };
+
+gameLoop();
 </script>
 </body>
 </html>
